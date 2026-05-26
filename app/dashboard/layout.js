@@ -1,8 +1,11 @@
 "use client"
 
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { onAuthStateChanged } from 'firebase/auth'
 import { BellRing, ClipboardList, Home, MapPinned, Search, ShieldCheck, TriangleAlert, Users } from 'lucide-react'
+import auth from '../../lib/firebase'
 
 const DASHBOARD_LINKS = [
   { href: '/dashboard', label: 'Overview', icon: Home },
@@ -17,6 +20,30 @@ const DASHBOARD_LINKS = [
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [authReady, setAuthReady] = useState(false)
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setAuthReady(true)
+
+      if (!currentUser) {
+        router.replace(`/login?next=${encodeURIComponent(pathname || '/dashboard')}`)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [pathname, router])
+
+  if (!authReady) {
+    return <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-sm text-slate-500">Checking access...</div>
+  }
+
+  if (!user) {
+    return <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 text-sm text-slate-500">Redirecting to login...</div>
+  }
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:px-8">

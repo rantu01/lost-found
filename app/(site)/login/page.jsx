@@ -2,11 +2,13 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { Mail, Lock } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { signInWithEmail, signInWithGooglePopup } from '../../../lib/firebase'
 
 const Login = () => {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = searchParams.get('next') || '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,7 +18,7 @@ const Login = () => {
     setLoading(true)
     try {
       await signInWithEmail(email, password)
-      router.push('/')
+      router.push(nextPath)
     } catch (err) {
       alert(err?.message || 'Login failed')
       console.error(err)
@@ -28,7 +30,7 @@ const Login = () => {
   const handleGoogle = async () => {
     try {
       await signInWithGooglePopup()
-      router.push('/')
+      router.push(nextPath)
     } catch (err) {
       alert(err?.message || 'Google sign-in failed')
       console.error(err)
