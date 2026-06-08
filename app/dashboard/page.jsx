@@ -85,7 +85,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {/* <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {countCards.map((card) => {
           const Icon = card.icon
           return (
@@ -102,43 +102,10 @@ export default function DashboardPage() {
             </article>
           )
         })}
-      </section>
+      </section> */}
 
-      <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
-        <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Category-wise report count</h2>
-              <p className="text-sm text-slate-500">Live distribution of reports from the database.</p>
-            </div>
-            <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
-              <RefreshCw className="h-4 w-4" />
-              Auto refresh
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {loading ? (
-              <p className="text-sm text-slate-500">Loading dashboard data...</p>
-            ) : stats.categoryCounts.length === 0 ? (
-              <p className="text-sm text-slate-500">No reports found yet.</p>
-            ) : (
-              stats.categoryCounts.slice(0, 8).map((item) => (
-                <div key={item.category} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700">{item.category}</span>
-                    <span className="text-slate-500">{item.count}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" style={{ width: `${Math.min(100, item.count * 12)}%` }} />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-6">
+      
+      <div className="space-y-6">
           <div className="rounded-[32px] border border-rose-100 bg-rose-50 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)]">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
@@ -164,9 +131,8 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </section>
 
-      <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
+      {/* <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">Recent activity</h2>
@@ -184,7 +150,7 @@ export default function DashboardPage() {
           ))}
           {(stats.recentActivities || []).length === 0 && <p className="text-sm text-slate-500">No recent activity yet.</p>}
         </div>
-      </section>
+      </section> */}
     </div>
   )
 }

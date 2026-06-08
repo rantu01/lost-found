@@ -13,11 +13,13 @@ import {
   PieChart,
   RefreshCw,
   Save,
+  Search,
   ShieldAlert,
   TrendingUp,
   Users,
   X,
   PencilLine,
+  Plus,
   Trash2,
 } from 'lucide-react'
 import auth from '../../lib/firebase'
@@ -86,6 +88,7 @@ export default function AdminDashboard() {
   const [commissionRules, setCommissionRules] = useState(DEFAULT_COMMISSION_RULES)
   const [savingRule, setSavingRule] = useState('')
   const [actionId, setActionId] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -147,6 +150,12 @@ export default function AdminDashboard() {
 
   const topUsers = useMemo(() => users.slice(0, 6), [users])
 
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users
+    const query = searchQuery.toLowerCase()
+    return users.filter((entry) => (entry.displayName || '').toLowerCase().includes(query) || (entry.email || '').toLowerCase().includes(query))
+  }, [users, searchQuery])
+
   const updateReportStatus = async (id, update) => {
     setActionId(id)
     try {
@@ -195,6 +204,15 @@ export default function AdminDashboard() {
 
   const updateRuleField = (category, field, value) => {
     setCommissionRules((current) => current.map((rule) => rule.category === category ? { ...rule, [field]: value } : rule))
+  }
+
+  const addCommissionRule = () => {
+    const newCategory = `New Category ${commissionRules.length + 1}`
+    setCommissionRules((current) => [...current, { tempId: `new-${Date.now()}`, category: newCategory, mode: 'percentage', value: 5, isNew: true }])
+  }
+
+  const updateRuleByIndex = (index, field, value) => {
+    setCommissionRules((current) => current.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, [field]: value } : rule))
   }
 
   const workflowReports = useMemo(() => {
@@ -251,140 +269,7 @@ export default function AdminDashboard() {
           <StatCard label="Transactions" value={dashboardCounts.totalTransactions || 0} helper="Stored payment history entries" icon={Clock3} tone="rose" />
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-          <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-950">Category-wise report count</h2>
-                <p className="text-sm text-slate-500">Breakdown from the live reports collection.</p>
-              </div>
-              <Badge tone="cyan">Live</Badge>
-            </div>
-
-            <div className="space-y-4">
-              {(stats.categoryCounts || []).length === 0 ? (
-                <p className="text-sm text-slate-500">No reports found yet.</p>
-              ) : (
-                stats.categoryCounts.slice(0, 8).map((item) => (
-                  <div key={item.category} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{item.category}</span>
-                      <span className="text-slate-500">{item.count}</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" style={{ width: `${Math.min(100, item.count * 12)}%` }} />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-950">Recent activity</h2>
-                  <p className="text-sm text-slate-500">Payments, alerts, and workflow changes.</p>
-                </div>
-                <Badge tone="slate">Auto refresh</Badge>
-              </div>
-
-              <div className="space-y-3">
-                {(stats.recentActivities || []).slice(0, 5).map((activity, index) => (
-                  <div key={`${activity.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-700">{activity.label}</p>
-                        <p className="mt-2 text-sm font-semibold text-slate-950">{activity.title}</p>
-                      </div>
-                      <Badge tone={activity.tone === 'success' ? 'emerald' : activity.tone === 'warning' ? 'amber' : 'slate'}>{activity.tone}</Badge>
-                    </div>
-                    <p className="mt-2 text-[11px] text-slate-400">{formatRelativeTime(activity.time)}</p>
-                  </div>
-                ))}
-                {(stats.recentActivities || []).length === 0 && <p className="text-sm text-slate-500">No recent activity yet.</p>}
-              </div>
-            </div>
-
-            <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-950">Current urgent items</h2>
-                  <p className="text-sm text-slate-500">High-priority cases from the dashboard feed.</p>
-                </div>
-                <ShieldAlert className="h-5 w-5 text-rose-600" />
-              </div>
-              <div className="space-y-3">
-                {(stats.urgentReports || []).slice(0, 4).map((report) => (
-                  <Link key={report._id || report.title} href={`/item/${report._id}`} className="block rounded-2xl border border-rose-100 bg-rose-50 p-4 transition hover:border-rose-300 hover:shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">{report.title}</p>
-                        <p className="text-xs text-slate-500">{report.location || 'Unknown location'}</p>
-                      </div>
-                      <Badge tone="rose">Emergency</Badge>
-                    </div>
-                  </Link>
-                ))}
-                {(stats.urgentReports || []).length === 0 && <p className="text-sm text-slate-500">No urgent items right now.</p>}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Commission rules</h2>
-              <p className="text-sm text-slate-500">Admin-controlled fixed or percentage commissions by category.</p>
-            </div>
-            <Badge tone="cyan">Editable</Badge>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {commissionRules.map((rule) => (
-              <div key={rule.category} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">{rule.category}</p>
-                    <p className="mt-1 text-xs text-slate-500">Current breakdown affects checkout preview.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => saveCommissionRule(rule)}
-                    disabled={savingRule === rule.category}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    {savingRule === rule.category ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mode</span>
-                    <select value={rule.mode || 'percentage'} onChange={(event) => updateRuleField(rule.category, 'mode', event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400">
-                      <option value="percentage">Percentage</option>
-                      <option value="fixed">Fixed</option>
-                    </select>
-                  </label>
-                  <label className="space-y-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Value</span>
-                    <input value={rule.value ?? 0} onChange={(event) => updateRuleField(rule.category, 'value', event.target.value)} type="number" min="0" step="0.5" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400" />
-                  </label>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Preview</span>
-                  <span className="font-semibold text-slate-950">{rule.mode === 'fixed' ? formatMoney(rule.value || 0) : `${Number(rule.value || 0)}%`}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+        <section className="">
           <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
@@ -460,30 +345,70 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          
+        </section>
+
+        <div className="space-y-6">
             <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-950">Active users</h2>
-                  <p className="text-sm text-slate-500">Recently synced Firebase users.</p>
+                  <h2 className="text-lg font-semibold text-slate-950">User management</h2>
+                  <p className="text-sm text-slate-500">All registered users with search.</p>
                 </div>
                 <Users className="h-5 w-5 text-cyan-700" />
               </div>
 
-              <div className="space-y-3">
-                {topUsers.map((entry) => (
-                  <div key={entry._id || entry.email} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-950">{entry.displayName || entry.email}</p>
-                      <p className="truncate text-xs text-slate-500">{entry.email}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge tone={entry.role === 'admin' ? 'slate' : 'cyan'}>{entry.role || 'user'}</Badge>
-                      <p className="mt-2 text-[11px] text-slate-400">Seen {formatRelativeTime(entry.lastSeen)}</p>
-                    </div>
+              <div className="relative mb-4">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search by name or email..."
+                  className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+                <div>
+                  <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">Active users</p>
+                  <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {topUsers.map((entry) => (
+                      <div key={entry._id || entry.email} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-950">{entry.displayName || entry.email}</p>
+                          <p className="truncate text-xs text-slate-500">{entry.email}</p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <Badge tone={entry.role === 'admin' ? 'slate' : 'cyan'}>{entry.role || 'user'}</Badge>
+                          <p className="mt-2 text-[11px] text-slate-400">Seen {formatRelativeTime(entry.lastSeen)}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {topUsers.length === 0 && <p className="text-sm text-slate-500">No active users.</p>}
                   </div>
-                ))}
-                {topUsers.length === 0 && <p className="text-sm text-slate-500">No users found.</p>}
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">All users</p>
+                  <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                    {filteredUsers.length === 0 ? (
+                      <p className="text-sm text-slate-500">No users matched your search.</p>
+                    ) : (
+                      filteredUsers.map((entry) => (
+                        <div key={entry._id || entry.email} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-950">{entry.displayName || entry.email}</p>
+                            <p className="truncate text-xs text-slate-500">{entry.email}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <Badge tone={entry.role === 'admin' ? 'slate' : 'cyan'}>{entry.role || 'user'}</Badge>
+                            <p className="mt-2 text-[11px] text-slate-400">Seen {formatRelativeTime(entry.lastSeen)}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -516,6 +441,138 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+
+        <section className="grid gap-6 xl:grid-cols-[1fr_1.2fr]">
+          <div className="rounded-[32px] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">Category-wise report count</h2>
+                <p className="text-xs text-slate-500">Live breakdown.</p>
+              </div>
+              <Badge tone="cyan">Live</Badge>
+            </div>
+
+            <div className="space-y-3">
+              {(stats.categoryCounts || []).length === 0 ? (
+                <p className="text-sm text-slate-500">No reports found yet.</p>
+              ) : (
+                stats.categoryCounts.slice(0, 6).map((item) => (
+                  <div key={item.category} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-slate-700">{item.category}</span>
+                      <span className="text-slate-500">{item.count}</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-600" style={{ width: `${Math.min(100, item.count * 12)}%` }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-950">Recent activity</h2>
+                <p className="text-xs text-slate-500">Payments, alerts, and workflow changes.</p>
+              </div>
+              <Badge tone="slate">Auto refresh</Badge>
+            </div>
+
+            <div className="space-y-2">
+              {(stats.recentActivities || []).length === 0 ? (
+                <p className="text-sm text-slate-500">No recent activity yet.</p>
+              ) : (
+                stats.recentActivities.slice(0, 4).map((activity, index) => (
+                  <div key={`${activity.title}-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-cyan-700">{activity.label}</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-950">{activity.title}</p>
+                      </div>
+                      <Badge tone={activity.tone === 'success' ? 'emerald' : activity.tone === 'warning' ? 'amber' : 'slate'}>{activity.tone}</Badge>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400">{formatRelativeTime(activity.time)}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Commission rules</h2>
+              <p className="text-sm text-slate-500">Admin-controlled fixed or percentage commissions by category.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={addCommissionRule}
+                className="inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 transition hover:bg-cyan-100"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add rule
+              </button>
+              <Badge tone="cyan">Editable</Badge>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {commissionRules.map((rule, ruleIndex) => (
+              <div key={rule.tempId || rule.category} className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    {rule.isNew ? (
+                      <label className="block space-y-1">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Category name</span>
+                        <input
+                          value={rule.category}
+                          onChange={(event) => updateRuleByIndex(ruleIndex, 'category', event.target.value)}
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-cyan-400"
+                        />
+                      </label>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-slate-950">{rule.category}</p>
+                        <p className="mt-1 text-xs text-slate-500">Current breakdown affects checkout preview.</p>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => saveCommissionRule(rule)}
+                    disabled={savingRule === rule.category}
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    {savingRule === rule.category ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mode</span>
+                    <select value={rule.mode || 'percentage'} onChange={(event) => (rule.isNew ? updateRuleByIndex(ruleIndex, 'mode', event.target.value) : updateRuleField(rule.category, 'mode', event.target.value))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400">
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Value</span>
+                    <input value={rule.value ?? 0} onChange={(event) => (rule.isNew ? updateRuleByIndex(ruleIndex, 'value', event.target.value) : updateRuleField(rule.category, 'value', event.target.value))} type="number" min="0" step="0.5" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400" />
+                  </label>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Preview</span>
+                  <span className="font-semibold text-slate-950">{rule.mode === 'fixed' ? formatMoney(rule.value || 0) : `${Number(rule.value || 0)}%`}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </div>

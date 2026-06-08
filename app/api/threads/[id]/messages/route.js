@@ -1,4 +1,14 @@
+import { ObjectId } from 'mongodb'
 import clientPromise from '../../../../../lib/mongodb'
+
+async function isChatUnlocked(db, threadId) {
+  try {
+    const report = await db.collection('reports').findOne({ _id: new ObjectId(threadId) })
+    return (report?.paymentStatus || '').toString().toLowerCase() === 'paid'
+  } catch {
+    return false
+  }
+}
 
 export async function GET(request, { params }) {
   try {
@@ -27,6 +37,11 @@ export async function POST(request, { params }) {
     const client = await clientPromise
     const db = client.db('trace-back')
     const { id } = await params
+
+    const chatUnlocked = await isChatUnlocked(db, id)
+    if (!chatUnlocked) {
+      return new Response(JSON.stringify({ message: 'Payment required before sending messages' }), { status: 403 })
+    }
     const doc = {
       threadId: id,
       senderId: body.senderId || '',

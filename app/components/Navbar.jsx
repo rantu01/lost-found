@@ -14,6 +14,7 @@ const Navbar = () => {
     const pathname = usePathname();
     const router = useRouter();
     const [user, setUser] = useState(null)
+    const [profile, setProfile] = useState({ displayName: '', photoURL: '' })
     const isAdmin = isAdminEmail(user?.email)
 
     const goToDashboard = () => {
@@ -37,6 +38,11 @@ const Navbar = () => {
             setUser(u)
 
             if (u?.email) {
+                setProfile({
+                    displayName: u.displayName || u.email.split('@')[0],
+                    photoURL: u.photoURL || '',
+                })
+
                 fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -52,6 +58,24 @@ const Navbar = () => {
         })
         return () => unsub()
     }, [])
+
+    useEffect(() => {
+        if (!user?.uid) return
+        fetch(`/api/users`)
+            .then((res) => res.json())
+            .then((data) => {
+                if (Array.isArray(data)) {
+                    const match = data.find((entry) => entry.uid === user.uid || entry.email === user.email)
+                    if (match) {
+                        setProfile({
+                            displayName: match.displayName || user.displayName || user.email?.split('@')[0] || 'User',
+                            photoURL: match.photoURL || user.photoURL || '',
+                        })
+                    }
+                }
+            })
+            .catch(() => {})
+    }, [user])
 
     const navLinks = [
         { name: 'Home', href: '/' },
@@ -105,16 +129,25 @@ const Navbar = () => {
                                     My Added Reports
                                 </Link> */}
                                 <div className="relative">
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsUserMenuOpen((value) => !value)}
-                                        className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2 text-gray-700 hover:border-blue-200 hover:text-blue-700 transition-colors"
-                                        aria-haspopup="menu"
-                                        aria-expanded={isUserMenuOpen}
-                                    >
-                                        <UserCircle2 className="w-5 h-5" />
-                                        <ChevronDown className="w-4 h-4" />
-                                    </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsUserMenuOpen((value) => !value)}
+                                            className="flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1.5 text-gray-700 hover:border-blue-200 hover:text-blue-700 transition-colors"
+                                            aria-haspopup="menu"
+                                            aria-expanded={isUserMenuOpen}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {profile.photoURL ? (
+                                                    <img src={profile.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" />
+                                                ) : (
+                                                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+                                                        {(profile.displayName || '?')[0].toUpperCase()}
+                                                    </div>
+                                                )}
+                                                <span className="hidden text-sm font-semibold sm:block">{profile.displayName}</span>
+                                            </div>
+                                            <ChevronDown className="h-4 w-4" />
+                                        </button>
 
                                     {isUserMenuOpen && (
                                         <div className="absolute right-0 top-full mt-3 w-52 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl z-50">

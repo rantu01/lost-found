@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import { ArrowRight, Bell, ShieldAlert } from 'lucide-react'
 import clientPromise from '../../../lib/mongodb'
 import { calculatePaymentBreakdown, formatMoney, getUrgencyLevel } from '../../../lib/finance'
+import AdminPostedBy from './AdminPostedBy'
 
 function formatDate(value) {
   if (!value) return 'Unknown date'
@@ -44,6 +45,8 @@ export default async function Page({ params }) {
 
   const reviewStatus = (report.reviewStatus || 'approved').toString().toLowerCase()
   const caseStatus = (report.caseStatus || 'open').toString().toLowerCase()
+  const paymentStatus = (report.paymentStatus || 'unpaid').toString().toLowerCase()
+  const contactVisible = paymentStatus === 'paid'
   const urgencyLevel = getUrgencyLevel(report)
   const breakdown = calculatePaymentBreakdown({
     category: report.category,
@@ -150,13 +153,13 @@ export default async function Page({ params }) {
                   Resolved view
                 </Link>
               )}
-              <Link href="/flash-news" className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">
+              {/* <Link href="/flash-news" className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">
                 <Bell className="h-4 w-4" />
                 Flash News
               </Link>
               <Link href="/my-reports" className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                 My reports
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>
@@ -176,7 +179,16 @@ export default async function Page({ params }) {
             <h2 className="text-lg font-semibold text-slate-950">Metadata</h2>
             <div className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"><span className="text-slate-500">Category</span><span className="font-semibold text-slate-950">{report.category || 'Uncategorized'}</span></div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"><span className="text-slate-500">Posted by</span><span className="font-semibold text-slate-950">{report.reporterName || report.userEmail || 'Anonymous'}</span></div>
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                <span className="text-slate-500">Posted by</span>
+                <AdminPostedBy reporterName={report.reporterName} userEmail={report.userEmail} contactVisible={contactVisible} />
+              </div>
+              {contactVisible && report.userEmail && (
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span className="text-slate-500">Contact</span>
+                  <span className="font-semibold text-slate-950">{report.userEmail}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3"><span className="text-slate-500">Lost at</span><span className="font-semibold text-slate-950">{formatDate(report.lostAt || report.date || report.createdAt)}</span></div>
             </div>
           </div>

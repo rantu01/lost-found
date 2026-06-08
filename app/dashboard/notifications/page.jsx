@@ -144,28 +144,48 @@ export default function DashboardNotificationsPage() {
           <p className="text-sm text-slate-500">No notifications yet.</p>
         ) : (
           <div className="space-y-3">
-            {notifications.map((notification) => (
-              <div key={notification._id || notification.title} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            {notifications.map((notification) => {
+              const content = (
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-semibold text-slate-950">{notification.title}</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-500">{notification.message}</p>
                   </div>
-                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${notification.isRead ? 'bg-slate-200 text-slate-600' : 'bg-cyan-100 text-cyan-700'}`}>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${notification.isRead ? 'bg-slate-200 text-slate-600' : 'bg-cyan-100 text-cyan-700'}`}>
                     {notification.isRead ? 'Read' : 'New'}
                   </span>
                 </div>
+              )
 
+              const footer = (
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                   <p>{formatRelativeTime(notification.createdAt)}</p>
                   {notification.actionUrl ? (
-                    <Link href={notification.actionUrl} className="font-semibold text-cyan-700 hover:text-cyan-800">
-                      Open item
-                    </Link>
+                    <span className="font-semibold text-cyan-700">Pay &amp; chat &rarr;</span>
                   ) : null}
                 </div>
-              </div>
-            ))}
+              )
+
+              if (notification.actionUrl) {
+                return (
+                  <Link
+                    key={notification._id || notification.title}
+                    href={notification.actionUrl}
+                    className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:bg-cyan-50 hover:shadow-sm"
+                  >
+                    {content}
+                    {footer}
+                  </Link>
+                )
+              }
+
+              return (
+                <div key={notification._id || notification.title} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  {content}
+                  {footer}
+                </div>
+              )
+            })}
           </div>
         )}
       </section>
