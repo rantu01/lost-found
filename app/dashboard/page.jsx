@@ -2,8 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { onAuthStateChanged } from 'firebase/auth'
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, MessageSquareMore, RefreshCw, ShieldAlert, TrendingUp, User2 } from 'lucide-react'
+import { AlertCircle, ArrowRight, BellRing, CheckCircle2, Clock3, FileText, MessageSquareMore, RefreshCw, ShieldAlert, TrendingUp, User2, XCircle } from 'lucide-react'
 import auth from '../../lib/firebase'
 
 function formatRelativeTime(value) {
@@ -19,9 +20,19 @@ function formatRelativeTime(value) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState(null)
-  const [stats, setStats] = useState({ counts: {}, categoryCounts: [], recentActivities: [], urgentReports: [] })
+  const [stats, setStats] = useState({ counts: {}, my: {}, categoryCounts: [], recentActivities: [], urgentReports: [] })
   const [loading, setLoading] = useState(true)
+  const [paymentFailed, setPaymentFailed] = useState(false)
+
+  useEffect(() => {
+    if (searchParams?.get('payment') === 'failed') {
+      setPaymentFailed(true)
+      router.replace('/dashboard', undefined, { shallow: true })
+    }
+  }, [searchParams, router])
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser))
@@ -33,13 +44,14 @@ export default function DashboardPage() {
 
     const loadDashboard = async () => {
       try {
-        const statsResponse = await fetch('/api/dashboard/stats')
+        const query = user?.uid ? `?userId=${encodeURIComponent(user.uid)}` : ''
+        const statsResponse = await fetch(`/api/dashboard/stats${query}`)
 
         const statsData = await statsResponse.json()
 
         if (!mounted) return
 
-        setStats(statsData || { counts: {}, categoryCounts: [], recentActivities: [], urgentReports: [] })
+        setStats(statsData || { counts: {}, my: {}, categoryCounts: [], recentActivities: [], urgentReports: [] })
       } catch (error) {
         console.error(error)
       } finally {
@@ -55,13 +67,13 @@ export default function DashboardPage() {
     }
   }, [user])
 
-  const countCards = useMemo(() => [
-    { label: 'Active Posts', value: stats?.counts?.activePosts || 0, tone: 'text-sky-700 bg-sky-50', icon: TrendingUp },
-    { label: 'Pending Approvals', value: stats?.counts?.pendingApprovals || 0, tone: 'text-amber-700 bg-amber-50', icon: ShieldAlert },
-    { label: 'Resolved Cases', value: stats?.counts?.resolvedCases || 0, tone: 'text-emerald-700 bg-emerald-50', icon: CheckCircle2 },
-    { label: 'Claimed Items', value: stats?.counts?.claimedItems || 0, tone: 'text-violet-700 bg-violet-50', icon: MessageSquareMore },
-    { label: 'Total Users', value: stats?.counts?.totalUsers || 0, tone: 'text-slate-700 bg-slate-100', icon: User2 },
-    { label: 'Transactions', value: stats?.counts?.totalTransactions || 0, tone: 'text-rose-700 bg-rose-50', icon: Clock3 },
+  const myCards = useMemo(() => [
+    { label: 'My Reports', value: stats?.my?.reports || 0, tone: 'text-sky-700 bg-sky-50', icon: FileText, href: '/dashboard/my-reports' },
+    { label: 'Pending Approval', value: stats?.my?.pending || 0, tone: 'text-amber-700 bg-amber-50', icon: ShieldAlert },
+    { label: 'Resolved', value: stats?.my?.resolved || 0, tone: 'text-emerald-700 bg-emerald-50', icon: CheckCircle2 },
+    { label: 'My Claims', value: stats?.my?.claims || 0, tone: 'text-violet-700 bg-violet-50', icon: MessageSquareMore },
+    { label: 'Notifications', value: stats?.my?.notifications || 0, tone: 'text-cyan-700 bg-cyan-50', icon: BellRing, href: '/dashboard/notifications' },
+    { label: 'Unread', value: stats?.my?.unreadNotifications || 0, tone: 'text-rose-700 bg-rose-50', icon: Clock3 },
   ], [stats])
 
   return (
@@ -85,11 +97,28 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {countCards.map((card) => {
+      {paymentFailed && (
+        <div className="rounded-[32px] border border-rose-200 bg-rose-50 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-700">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-rose-950">Payment failed</h2>
+              <p className="mt-1 text-sm text-rose-700">Your payment could not be completed. Please try again from the request workspace.</p>
+            </div>
+            <button type="button" onClick={() => setPaymentFailed(false)} className="ml-auto shrink-0 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100">
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {myCards.map((card) => {
           const Icon = card.icon
-          return (
-            <article key={card.label} className="rounded-[28px] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
+          const content = (
+            <article className="rounded-[28px] border border-white/70 bg-white/90 p-5 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.4)] backdrop-blur">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-slate-500">{card.label}</p>
@@ -101,8 +130,9 @@ export default function DashboardPage() {
               </div>
             </article>
           )
+          return card.href ? <Link key={card.label} href={card.href}>{content}</Link> : <div key={card.label}>{content}</div>
         })}
-      </section> */}
+      </section>
 
       
       <div className="space-y-6">

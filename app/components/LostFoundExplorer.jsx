@@ -168,6 +168,8 @@ function FilterContent({
   )
 }
 
+const ITEMS_PER_PAGE = 9
+
 export default function LostFoundExplorer({ defaultStatus = 'ALL', title, description }) {
   const router = useRouter()
   const [reports, setReports] = useState([])
@@ -179,6 +181,7 @@ export default function LostFoundExplorer({ defaultStatus = 'ALL', title, descri
   const [dateTo, setDateTo] = useState('')
   const [status, setStatus] = useState(normalizeType(defaultStatus) || 'ALL')
   const [sortBy, setSortBy] = useState('newest')
+  const [currentPage, setCurrentPage] = useState(1)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
 
   useEffect(() => {
@@ -243,6 +246,13 @@ export default function LostFoundExplorer({ defaultStatus = 'ALL', title, descri
 
       return sortBy === 'oldest' ? leftDate - rightDate : rightDate - leftDate
     })
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / ITEMS_PER_PAGE))
+  const paginatedReports = filteredReports.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, location, selectedCategories, dateFrom, dateTo, status, sortBy])
 
   const resetFilters = () => {
     setSearch('')
@@ -344,13 +354,13 @@ export default function LostFoundExplorer({ defaultStatus = 'ALL', title, descri
               <div className="rounded-3xl border border-gray-100 bg-white p-10 text-gray-500 shadow-sm">
                 Loading reports...
               </div>
-            ) : filteredReports.length === 0 ? (
+            ) : paginatedReports.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-10 text-center text-gray-500 shadow-sm">
                 No reports match your filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredReports.map((item) => {
+                {paginatedReports.map((item) => {
                   const reportType = normalizeType(item.type)
                   return (
                     <div key={item._id} className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all group">
@@ -402,15 +412,44 @@ export default function LostFoundExplorer({ defaultStatus = 'ALL', title, descri
               </div>
             )}
 
-            <div className="mt-12 flex justify-center items-center gap-2 opacity-60 pointer-events-none">
-              <button className="p-2 text-gray-400 hover:text-blue-600" type="button"><ChevronLeft className="w-5 h-5" /></button>
-              <button className="w-8 h-8 rounded bg-blue-900 text-white text-sm font-medium" type="button">1</button>
-              <button className="w-8 h-8 rounded hover:bg-gray-100 text-gray-600 text-sm" type="button">2</button>
-              <button className="w-8 h-8 rounded hover:bg-gray-100 text-gray-600 text-sm" type="button">3</button>
-              <span className="px-1 text-gray-400 italic">...</span>
-              <button className="w-8 h-8 rounded hover:bg-gray-100 text-gray-600 text-sm" type="button">12</button>
-              <button className="p-2 text-gray-400 hover:text-blue-600" type="button"><ChevronRight className="w-5 h-5" /></button>
-            </div>
+            {totalPages > 1 && (
+              <div className="mt-12 flex justify-center items-center gap-2">
+                <button
+                  className={`p-2 text-gray-400 hover:text-blue-600 ${currentPage <= 1 ? 'opacity-30 pointer-events-none' : ''}`}
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                  .map((page, idx, arr) => (
+                    <React.Fragment key={page}>
+                      {idx > 0 && arr[idx - 1] !== page - 1 && <span className="px-1 text-gray-400 italic">...</span>}
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        className={`w-8 h-8 rounded text-sm font-medium ${
+                          page === currentPage
+                            ? 'bg-blue-900 text-white'
+                            : 'hover:bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  ))}
+
+                <button
+                  className={`p-2 text-gray-400 hover:text-blue-600 ${currentPage >= totalPages ? 'opacity-30 pointer-events-none' : ''}`}
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </main>
         </div>
       </div>

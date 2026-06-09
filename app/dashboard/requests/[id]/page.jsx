@@ -28,7 +28,6 @@ export default function RequestWorkspacePage() {
   const [paying, setPaying] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [claimInfo, setClaimInfo] = useState(null)
-  const autoCheckoutStarted = useRef(false)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => setUser(currentUser))
@@ -182,20 +181,7 @@ export default function RequestWorkspacePage() {
     }
   }, [report, user, reportId, reportType, requestType])
 
-  useEffect(() => {
-    if (
-      !loading &&
-      user?.uid &&
-      report &&
-      !isPaid &&
-      claimInfo?.autoCheckout &&
-      shouldPay &&
-      !autoCheckoutStarted.current
-    ) {
-      autoCheckoutStarted.current = true
-      startCheckout()
-    }
-  }, [loading, user, report, isPaid, claimInfo, shouldPay, startCheckout])
+  // Auto-redirect intentionally removed — user clicks "Pay" manually.
 
   const sendMessage = async () => {
     if (!messageInput.trim() || !canChat) return

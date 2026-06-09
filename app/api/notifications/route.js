@@ -12,7 +12,7 @@ export async function GET(request) {
 
     const client = await clientPromise
     const db = client.db('trace-back')
-    const filter = recipientId ? { $or: [{ recipientId }, { userId: recipientId }] } : {}
+    const filter = recipientId ? { recipientId } : {}
     const notifications = await db.collection('notifications').find(filter).sort({ createdAt: -1 }).limit(200).toArray()
 
     return new Response(JSON.stringify(notifications), { status: 200 })

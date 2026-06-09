@@ -30,9 +30,10 @@ export default function DashboardNotificationsPage() {
   }, [])
 
   const loadNotifications = async () => {
+    if (!user?.uid) return
     setRefreshing(true)
     try {
-      const response = await fetch(`/api/notifications${user?.uid ? `?userId=${encodeURIComponent(user.uid)}` : ''}`)
+      const response = await fetch(`/api/notifications?userId=${encodeURIComponent(user.uid)}`)
       const data = await response.json()
       setNotifications(Array.isArray(data) ? data : [])
     } catch (error) {
@@ -44,6 +45,7 @@ export default function DashboardNotificationsPage() {
   }
 
   useEffect(() => {
+    if (!user?.uid) return
     let mounted = true
 
     const run = async () => {

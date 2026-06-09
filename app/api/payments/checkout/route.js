@@ -67,7 +67,7 @@ export async function POST(request) {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment',
         success_url: `${getOrigin(request)}/dashboard/requests/${reportId || transactionId}?payment=success&transaction=${transactionId}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${getOrigin(request)}/dashboard/requests/${reportId || transactionId}?payment=cancelled&transaction=${transactionId}`,
+        cancel_url: `${getOrigin(request)}/dashboard?payment=failed&reportId=${reportId || transactionId}`,
         line_items: [
           {
             price_data: {

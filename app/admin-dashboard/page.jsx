@@ -89,6 +89,7 @@ export default function AdminDashboard() {
   const [savingRule, setSavingRule] = useState('')
   const [actionId, setActionId] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [reportTypeFilter, setReportTypeFilter] = useState('ALL')
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -202,6 +203,20 @@ export default function AdminDashboard() {
     }
   }
 
+  const deleteCommissionRule = async (category) => {
+    if (!confirm(`Delete commission rule for "${category}"?`)) return
+    try {
+      const response = await fetch(`/api/commission-rules?category=${encodeURIComponent(category)}&adminEmail=${encodeURIComponent(user.email)}`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data?.message || 'Delete failed')
+      setCommissionRules((current) => current.filter((entry) => entry.category !== category))
+    } catch (deleteError) {
+      alert(deleteError?.message || 'Delete failed')
+    }
+  }
+
   const updateRuleField = (category, field, value) => {
     setCommissionRules((current) => current.map((rule) => rule.category === category ? { ...rule, [field]: value } : rule))
   }
@@ -216,11 +231,12 @@ export default function AdminDashboard() {
   }
 
   const workflowReports = useMemo(() => {
-    return reports
+    const filtered = reportTypeFilter === 'ALL' ? reports : reports.filter((r) => (r.type || '').toString().toUpperCase() === reportTypeFilter)
+    return filtered
       .slice()
       .sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0))
       .slice(0, 8)
-  }, [reports])
+  }, [reports, reportTypeFilter])
 
   if (loading) {
     return <div className="min-h-screen bg-slate-50 p-8 text-center text-slate-500">Loading admin dashboard...</div>
@@ -277,6 +293,23 @@ export default function AdminDashboard() {
                 <p className="text-sm text-slate-500">Approve, reject, or close out reports with one action.</p>
               </div>
               <Badge tone="blue">{workflowReports.length} visible</Badge>
+            </div>
+
+            <div className="mb-5 flex gap-2 border-b border-slate-100 pb-3">
+              {['ALL', 'LOST', 'FOUND'].map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setReportTypeFilter(tab)}
+                  className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                    reportTypeFilter === tab
+                      ? 'bg-slate-950 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {tab === 'ALL' ? 'All' : tab}
+                </button>
+              ))}
             </div>
 
             <div className="overflow-x-auto">
@@ -542,15 +575,26 @@ export default function AdminDashboard() {
                       </>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => saveCommissionRule(rule)}
-                    disabled={savingRule === rule.category}
-                    className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    {savingRule === rule.category ? 'Saving...' : 'Save'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveCommissionRule(rule)}
+                      disabled={savingRule === rule.category}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      {savingRule === rule.category ? 'Saving...' : 'Save'}
+                    </button>
+                    {!rule.isNew && (
+                      <button
+                        type="button"
+                        onClick={() => deleteCommissionRule(rule.category)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">

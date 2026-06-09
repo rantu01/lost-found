@@ -62,3 +62,31 @@ export async function POST(request) {
     return new Response(JSON.stringify({ message: error.message }), { status: 500 })
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const category = searchParams.get('category')
+    const adminEmail = (searchParams.get('adminEmail') || '').toLowerCase()
+
+    if (!isAdminEmail(adminEmail)) {
+      return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 403 })
+    }
+
+    if (!clientPromise) {
+      return new Response(JSON.stringify({ message: 'Database not configured' }), { status: 503 })
+    }
+
+    if (!category) {
+      return new Response(JSON.stringify({ message: 'Category is required' }), { status: 400 })
+    }
+
+    const client = await clientPromise
+    const db = client.db('trace-back')
+    await db.collection('commission-rules').deleteOne({ category })
+
+    return new Response(JSON.stringify({ success: true, category }), { status: 200 })
+  } catch (error) {
+    return new Response(JSON.stringify({ message: error.message }), { status: 500 })
+  }
+}
